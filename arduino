@@ -1,0 +1,471 @@
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Data;
+using System.Drawing;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Windows.Forms;
+using System.IO.Ports;
+namespace Arduino
+{
+    public partial class Form1 : Form
+    {
+
+        SerialPort Port;
+        
+        
+        string ComPortName = null;
+
+        public enum ECU_LEFT_Control: byte { 
+            PowerOn = 1,
+            PowerOff,
+            Position1_Open ,
+            Position1_GND,
+            Position2_Open,
+            Position2_GND,
+            Position3_Open,
+            Position3_GND,
+            ShortPCAN_Open,
+            ShortPCAN_GND,
+            ShortVCAN_Open,
+            ShortVCAN_GND,
+        }
+        public enum ECU_RIGHT_Control : byte
+        {
+            PowerOn = 13,
+            PowerOff,
+            Position1_Open,
+            Position1_GND,
+            Position2_Open,
+            Position2_GND,
+            Position3_Open,
+            Position3_GND,
+            ShortPCAN_Open,
+            ShortPCAN_GND,
+            ShortVCAN_Open,
+            ShortVCAN_GND,
+        }
+        public Form1()
+        {
+            InitializeComponent();
+
+            FormBorderStyle = FormBorderStyle.FixedSingle;
+
+            string[] ArrayComPortsNames = null;
+            ArrayComPortsNames = SerialPort.GetPortNames();
+            int index = -1;
+            
+            ArrayComPortsNames = SerialPort.GetPortNames();
+            do
+            {
+                index += 1;
+                cb_PortList.Items.Add(ArrayComPortsNames[index]);
+            }
+
+            while (!((ArrayComPortsNames[index] == ComPortName)
+                          || (index == ArrayComPortsNames.GetUpperBound(0))));
+            Array.Sort(ArrayComPortsNames);
+
+            //want to get first out
+            if (index == ArrayComPortsNames.GetUpperBound(0))
+            {
+                ComPortName = ArrayComPortsNames[0];
+                
+            }
+            cb_PortList.Text = ArrayComPortsNames[0];
+
+            bt_disconnect.Enabled = false;
+        }
+
+        private void Form1_Load(object sender, EventArgs e)
+        {
+
+        }
+
+
+
+        private void cb_PortList_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            ComPortName = cb_PortList.Text;
+
+        }
+
+        private void bt_connect_Click(object sender, EventArgs e)
+        {
+            Port = new SerialPort(ComPortName,9600);
+            Port.Open();
+            if (Port.IsOpen)
+            {
+                bt_connect.Enabled = false;
+                Port.DataReceived += new SerialDataReceivedEventHandler(sp_DataReceived);
+                cb_PortList.BackColor = Color.Lime;
+                bt_disconnect.Enabled = true;
+            }
+        }
+
+        private void bt_disconnect_Click(object sender, EventArgs e)
+        {
+            if (Port != null)
+            {
+                Port.Close();
+                bt_connect.Enabled = true;
+                cb_PortList.BackColor = Color.White;
+                bt_disconnect.Enabled = false;
+            }
+            //if (Port == null)
+            //{
+            //    bt_connect.Enabled = true;
+            //    cb_PortList.BackColor = Color.White;
+            //}
+        }
+
+        private bool sendDataViaPort(byte[] data)
+        {
+            if (Port.IsOpen) //check if port is connected
+            {
+                Port.Write(data,0,1);
+                return true;
+            }
+            
+            return false;
+        }
+        void sp_DataReceived(object sender, SerialDataReceivedEventArgs e)
+        {
+            
+            string data = Port.ReadLine();
+            // Invokes the delegate on the UI thread, and sends the data that was received to the invoked method.  
+            // ---- The "si_DataReceived" method will be executed on the UI thread which allows populating of the textbox.  
+            
+        }
+
+        /// <summary>
+        /// Send data via port to Power on Left ECU
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+       
+        private void rbt_PowerOn_Left_CheckedChanged(object sender, EventArgs e)
+        {
+            if (rbt_PowerOn_Left.Checked == true)
+            {
+
+                if (Port != null && Port.IsOpen)
+                {
+                    byte[] buffer = new byte[] { Convert.ToByte(ECU_LEFT_Control.PowerOn) };
+                    sendDataViaPort(buffer);
+                }
+                else
+                {
+
+                    MessageBox.Show("Port is not connected");
+                   // rbt_PowerOn_Left.Checked = false;
+                }
+            }
+            else
+            {
+                if (Port != null && Port.IsOpen)
+                {
+
+                    byte[] buffer = new byte[] { Convert.ToByte(ECU_LEFT_Control.PowerOff) };
+                    sendDataViaPort(buffer);
+                }
+                else
+                {
+                    //rbt_PowerOff_Left.Checked = false;
+                    MessageBox.Show("Port is not connected");
+                }
+            }
+        }
+
+        /// <summary>
+        /// Send data via port to Power off Left ECU
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void rbt_PowerOff_Left_CheckedChanged(object sender, EventArgs e)
+        {
+            if(Port != null && Port.IsOpen)
+            {
+
+                byte[] buffer = new byte[] { Convert.ToByte(ECU_LEFT_Control.PowerOff) };
+                sendDataViaPort(buffer);
+            }
+            else
+            {
+                //rbt_PowerOff_Left.Checked = false;
+                MessageBox.Show("Port is not connected");
+            }
+        }
+
+        private void cb_Pos1_Left_CheckedChanged(object sender, EventArgs e)
+        {
+            if (Port != null && Port.IsOpen)
+            {
+                if (cb_Pos1_Left.Checked)
+                {
+
+                    byte[] buffer = new byte[] { Convert.ToByte(ECU_LEFT_Control.Position1_Open) };
+                    sendDataViaPort(buffer);
+                }
+                else
+                {
+                    byte[] buffer = new byte[] { Convert.ToByte(ECU_LEFT_Control.Position1_GND) };
+                    sendDataViaPort(buffer);
+                }
+            }
+            else
+            {
+                //cb_Pos1_Left.Checked = false;
+                MessageBox.Show("Port is not connected");
+            }
+}
+
+        private void cb_Pos2_Left_CheckedChanged(object sender, EventArgs e)
+        {
+            if (Port != null && Port.IsOpen)
+                {
+                if (cb_Pos2_Left.Checked)
+                {
+
+                    byte[] buffer = new byte[] { Convert.ToByte(ECU_LEFT_Control.Position2_Open) };
+                    sendDataViaPort(buffer);
+                }
+                else
+                {
+                    byte[] buffer = new byte[] { Convert.ToByte(ECU_LEFT_Control.Position2_GND) };
+                    sendDataViaPort(buffer);
+                }
+            }
+            else
+            {
+                //cb_Pos2_Left.Checked = false;
+                MessageBox.Show("Port is not connected");
+            }
+}
+
+
+        private void cb_Pos3_Left_CheckedChanged(object sender, EventArgs e)
+        {
+            if (Port != null && Port.IsOpen)
+            { 
+                if (cb_Pos3_Left.Checked)
+                {
+
+                    byte[] buffer = new byte[] { Convert.ToByte(ECU_LEFT_Control.Position3_Open) };
+                    sendDataViaPort(buffer);
+                }
+                else
+                {
+                    byte[] buffer = new byte[] { Convert.ToByte(ECU_LEFT_Control.Position3_GND) };
+                    sendDataViaPort(buffer);
+                }
+            }
+            else
+            {
+                //cb_Pos3_Left.Checked = false;
+                MessageBox.Show("Port is not connected");
+            }
+}
+
+        private void cb_ShortPCAN_Left_CheckedChanged(object sender, EventArgs e)
+        {
+            if (Port != null && Port.IsOpen)
+            {
+                if (cb_ShortPCAN_Left.Checked)
+                {
+
+                    byte[] buffer = new byte[] { Convert.ToByte(ECU_LEFT_Control.ShortPCAN_GND) };
+                    sendDataViaPort(buffer);
+                }
+                else
+                {
+                    byte[] buffer = new byte[] { Convert.ToByte(ECU_LEFT_Control.ShortPCAN_Open) };
+                    sendDataViaPort(buffer);
+                }
+            }
+            else
+            {
+                //cb_ShortPCAN_Left.Checked = false;
+                MessageBox.Show("Port is not connected");
+            }
+}
+
+        private void cb_ShortVCAN_Left_CheckedChanged(object sender, EventArgs e)
+        {
+            if (Port != null && Port.IsOpen)
+            {
+                    if (cb_ShortVCAN_Left.Checked)
+                {
+
+                    byte[] buffer = new byte[] { Convert.ToByte(ECU_LEFT_Control.ShortVCAN_GND) };
+                    sendDataViaPort(buffer);
+                }
+                else
+                {
+                    byte[] buffer = new byte[] { Convert.ToByte(ECU_LEFT_Control.ShortVCAN_Open) };
+                    sendDataViaPort(buffer);
+                }
+            }
+            else
+            {
+                //cb_ShortVCAN_Left.Checked = false;
+                MessageBox.Show("Port is not connected");
+            }
+        }
+
+        /// <summary>
+        /// /////////////////////////////////////////////////
+        /// </summary>
+ 
+        //ECU RIGHT///
+        private void rb_PowerOn_Right_CheckedChanged(object sender, EventArgs e)
+        {
+            if (rb_PowerOn_Right.Checked == true)
+            {
+
+                if (Port != null && Port.IsOpen)
+                {
+                    byte[] buffer = new byte[] { Convert.ToByte(ECU_RIGHT_Control.PowerOn) };
+                    sendDataViaPort(buffer);
+                }
+                else
+                {
+
+                    MessageBox.Show("Port is not connected");
+                    // rbt_PowerOn_Left.Checked = false;
+                }
+            }
+            else
+            {
+                if (Port != null && Port.IsOpen)
+                {
+
+                    byte[] buffer = new byte[] { Convert.ToByte(ECU_RIGHT_Control.PowerOff) };
+                    sendDataViaPort(buffer);
+                }
+                else
+                {
+                    //rbt_PowerOff_Left.Checked = false;
+                    MessageBox.Show("Port is not connected");
+                }
+            }
+        }
+
+        private void cb_Pos1_Right_CheckedChanged(object sender, EventArgs e)
+        {
+            if (Port != null && Port.IsOpen)
+            {
+                if (cb_Pos1_Right.Checked)
+                {
+
+                    byte[] buffer = new byte[] { Convert.ToByte(ECU_RIGHT_Control.Position1_Open) };
+                    sendDataViaPort(buffer);
+                }
+                else
+                {
+                    byte[] buffer = new byte[] { Convert.ToByte(ECU_RIGHT_Control.Position1_GND) };
+                    sendDataViaPort(buffer);
+                }
+            }
+            else
+            {
+                //cb_Pos1_Left.Checked = false;
+                MessageBox.Show("Port is not connected");
+            }
+        }
+
+        private void cb_Pos2_Right_CheckedChanged(object sender, EventArgs e)
+        {
+            if (Port != null && Port.IsOpen)
+            {
+                if (cb_Pos2_Right.Checked)
+                {
+
+                    byte[] buffer = new byte[] { Convert.ToByte(ECU_RIGHT_Control.Position2_Open) };
+                    sendDataViaPort(buffer);
+                }
+                else
+                {
+                    byte[] buffer = new byte[] { Convert.ToByte(ECU_RIGHT_Control.Position2_GND) };
+                    sendDataViaPort(buffer);
+                }
+            }
+            else
+            {
+                //cb_Pos2_Left.Checked = false;
+                MessageBox.Show("Port is not connected");
+            }
+        }
+
+        private void cb_Pos3_Right_CheckedChanged(object sender, EventArgs e)
+        {
+            if (Port != null && Port.IsOpen)
+            {
+                if (cb_Pos3_Right.Checked)
+                {
+
+                    byte[] buffer = new byte[] { Convert.ToByte(ECU_RIGHT_Control.Position3_Open) };
+                    sendDataViaPort(buffer);
+                }
+                else
+                {
+                    byte[] buffer = new byte[] { Convert.ToByte(ECU_RIGHT_Control.Position3_GND) };
+                    sendDataViaPort(buffer);
+                }
+            }
+            else
+            {
+                //cb_Pos3_Left.Checked = false;
+                MessageBox.Show("Port is not connected");
+            }
+        }
+
+        private void cb_ShortPCAN_Right_CheckedChanged(object sender, EventArgs e)
+        {
+            if (Port != null && Port.IsOpen)
+            {
+                if (cb_ShortPCAN_Right.Checked)
+                {
+
+                    byte[] buffer = new byte[] { Convert.ToByte(ECU_RIGHT_Control.ShortPCAN_GND) };
+                    sendDataViaPort(buffer);
+                }
+                else
+                {
+                    byte[] buffer = new byte[] { Convert.ToByte(ECU_RIGHT_Control.ShortPCAN_Open) };
+                    sendDataViaPort(buffer);
+                }
+            }
+            else
+            {
+                //cb_ShortPCAN_Left.Checked = false;
+                MessageBox.Show("Port is not connected");
+            }
+        }
+
+        private void cb_ShortVCAN_Right_CheckedChanged(object sender, EventArgs e)
+        {
+            if (Port != null && Port.IsOpen)
+            {
+                if (cb_ShortVCAN_Right.Checked)
+                {
+
+                    byte[] buffer = new byte[] { Convert.ToByte(ECU_RIGHT_Control.ShortVCAN_GND) };
+                    sendDataViaPort(buffer);
+                }
+                else
+                {
+                    byte[] buffer = new byte[] { Convert.ToByte(ECU_RIGHT_Control.ShortVCAN_Open) };
+                    sendDataViaPort(buffer);
+                }
+            }
+            else
+            {
+                //cb_ShortVCAN_Left.Checked = false;
+                MessageBox.Show("Port is not connected");
+            }
+        }
+    }
+}
